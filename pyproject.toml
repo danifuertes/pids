@@ -1,6 +1,6 @@
 [project]
 authors = [{name = "Daniel Fuertes", email = "d.fcoiras@upm.es"}]
-dependencies = ["robomaster>=0.1.1.68,<0.2"]
+dependencies = ["robomaster>=0.1.1.68,<0.2", "opencv-python>=5.0.0.93,<6", "ipykernel>=6.29.5,<7"]
 name = "pids"
 requires-python = ">= 3.7"
 version = "0.1.0"
