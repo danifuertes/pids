@@ -7,6 +7,8 @@ import torch
 from robomaster import robot, blaster
 from torchvision.models import detection
 import torchvision.transforms.v2 as transforms
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from typing import Tuple, Union, Any
 
 
@@ -138,6 +140,50 @@ def get_transform(resize_shape: Union[tuple, None] = None) -> transforms.Compose
     return transforms.Compose(t)
 
 
+def resize_boxes(boxes: Any, resize_shape: tuple, image_shape: tuple) -> Any:
+    """Rescale [x_min, y_min, x_max, y_max] boxes when the image is resized (height, width)."""
+    scale_h, scale_w = resize_shape[0] / image_shape[0], resize_shape[1] / image_shape[1]
+    boxes[:, [0, 2]] *= scale_w
+    boxes[:, [1, 3]] *= scale_h
+    return boxes
+
+
+def predict(ep_robot, model, resize_shape=None):
+    """Capture one camera frame, run the detector on it and return the results.
+
+    Handles the whole inference pipeline: frame capture, BGR->RGB, pre-processing
+    (get_transform), model inference and post-processing (predictions moved to
+    CPU/NumPy and boxes scaled back to the original image size).
+    :param ep_robot: connected RoboMaster object (see connect()).
+    :param model: trained detection model (see get_model()).
+    :param resize_shape: (height, width) to resize the image for the model, or None.
+    :return: (image, prediction) — the original-size RGB image and a dict of NumPy
+             arrays 'boxes' (N, 4 as [x_min, y_min, x_max, y_max]), 'scores' (N,), 'labels' (N,).
+    """
+    # Grab one frame from the robot camera
+    ep_camera = ep_robot.camera
+    ep_camera.start_video_stream(display=False)
+    image = ep_camera.read_cv2_image()              # BGR image, shape (height, width, 3)
+    ep_camera.stop_video_stream()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # RGB image, shape (height, width, 3)
+
+    # Make predictions
+    device = next(model.parameters()).device
+    transform = get_transform(resize_shape)
+    model.eval()
+    with torch.no_grad():
+        output = model([transform(image).to(device)])[0]
+
+    # Bring the predictions to CPU/NumPy so they are easy to work with
+    prediction = {key: value.detach().cpu().numpy() for key, value in output.items()}
+
+    # Scale predictions back to the original image size if resize was applied
+    if resize_shape is not None:
+        prediction['boxes'] = resize_boxes(prediction['boxes'], image.shape[:2], resize_shape)
+
+    return image, prediction
+
+
 def auto_aim(image, box) -> float:
     """Yaw angle (degrees) from the image centre to the centre of a detected box.
 
@@ -159,52 +205,32 @@ def auto_aim(image, box) -> float:
     return alpha
 
 
-def detect_and_shoot(ep_robot, model, score_threshold=0.5):
-    """Capture an image, detect the enemy robot, aim the gimbal at it and shoot.
+def plot_predictions(image, prediction, target_id, score_threshold=0.5, path='predictions'):
+    """Draw the predicted boxes (above score_threshold) on the image and save it.
 
-    The camera capture is already done for you. Fill in the detection, aiming
-    and shooting steps using what you learned in week 2 (model inference) and
-    in the scripts of this week (gimbal and blaster).
-    :param ep_robot: connected RoboMaster object (see connect()).
-    :param model: trained detection model (see get_model()).
-    :param score_threshold: minimum confidence to accept a detection.
+    Same plotting style as week2's test.ipynb, but it saves one figure per
+    target (file name = target id) instead of showing it, since the demo runs
+    as a script and not in a notebook.
+    :param image: RGB image the predictions were computed on.
+    :param prediction: dict with NumPy arrays 'boxes' (N, 4) and 'scores' (N,).
+    :param target_id: identifier of the target; used as the output file name.
+    :param score_threshold: minimum confidence to draw a box.
+    :param path: folder where the figures are saved (created if it does not exist).
     """
+    boxes = prediction['boxes']
+    scores = prediction['scores']
 
-    # --- Capture one image from the robot camera (done for you) ---------------
-    ep_camera = ep_robot.camera
-    ep_camera.start_video_stream(display=False)
-    image = ep_camera.read_cv2_image()          # BGR image, shape (height, width, 3)
-    ep_camera.stop_video_stream()
-
-    # --- STEP 1: run the model on the image -----------------------------------
-    # Guides:
-    #   * OpenCV returns BGR, but the model was trained on RGB, so convert it:
-    #         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #   * Pre-process it exactly like in week 2 (get_transform is imported here):
-    #         transform = get_transform()
-    #         tensor = transform(rgb)
-    #   * Run inference in evaluation mode, without gradients, on the model's device:
-    #         device = next(model.parameters()).device
-    #         model.eval()
-    #         with torch.no_grad():
-    #             prediction = model([tensor.to(device)])[0]
-    #   * `prediction` is a dict with 'boxes', 'scores' and 'labels' (see test.ipynb).
-    prediction = ...
-
-    # --- STEP 2: choose the best detection ------------------------------------
-    # Guides:
-    #   * Move the boxes and scores to CPU/numpy so they are easy to work with.
-    #   * Keep only the boxes whose score is >= score_threshold.
-    #   * If none survive there is nothing to shoot: print a message and `return`.
-    #   * Otherwise pick the box with the HIGHEST score (the clearest robot).
-    #   * A box is [x_min, y_min, x_max, y_max].
-    best_box = ...
-
-    # --- STEP 3: aim the gimbal at the target ---------------------------------
-    ...
-
-    # --- STEP 4: shoot --------------------------------------------------------
-    ...
-
-    # --- STEP 5: save the image with the detection (to check your work) -------
-    ...
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.imshow(image)
+    ax.axis('off')
+    ax.set_title(f'Target {target_id}')
+    for (x_min, y_min, x_max, y_max), score in zip(boxes, scores):
+        if score < score_threshold:
+            continue
+        ax.add_patch(Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
+                               linewidth=2, edgecolor='lime', facecolor='none'))
+        ax.text(x_min, y_min - 5, f'{score:.2f}', color='white', fontsize=10,
+                bbox=dict(facecolor='black', alpha=0.6, pad=1))
+    os.makedirs(path, exist_ok=True)
+    fig.savefig(os.path.join(path, f'{target_id}.png'), bbox_inches='tight')
+    plt.close(fig)
