@@ -3,27 +3,25 @@ from robomaster import robot
 
 
 def connect(connection='networking'):
-    """
-    Connect to RoboMaster using networking mode. You must first run the \
-        connect.py script and scan the QR code with the robot. A txt named \
-        'serial_number.txt' should exist and contain the serial number of \
-        the robot.
-    :param image: type of connection. Options are: 'networking' (Router), 'wifi' (Wi-Fi), 'usb' (USB).
-    :return:
-        ep_robot: RoboMaster object with connection established.
-    """
-    mapping = {'networking': 'sta', 'wifi': 'ap', 'usb': 'rndis'}
+    """Connect to the RoboMaster and return the robot object.
 
-    # Get serial number
+    Run connect.py once and scan the QR code so the robot joins your network.
+    In 'networking' mode the robot is found by the serial number saved in
+    'serial_number.txt' (created by connect.py).
+    :param connection: 'networking' (router), 'wifi' (direct Wi-Fi) or 'usb'.
+    :return: ep_robot, a connected RoboMaster object.
+    """
+    conn_types = {'networking': 'sta', 'wifi': 'ap', 'usb': 'rndis'}
+
+    # In networking mode the robot is identified by its serial number
+    serial_number = None
     if connection == 'networking':
         with open('serial_number.txt', 'r') as f:
-            SERIAL_NUMBER = f.read()
-    else:
-        SERIAL_NUMBER = None
+            serial_number = f.read()
 
-    # Start connection
+    # Start the connection
     ep_robot = robot.Robot()
-    ep_robot.initialize(conn_type=mapping[connection], sn=SERIAL_NUMBER)
+    ep_robot.initialize(conn_type=conn_types[connection], sn=serial_number)
     return ep_robot
 
 
@@ -42,27 +40,21 @@ if __name__ == '__main__':
     speed_xy = 1.0  # m/s
     speed_z = 45    # º/s
 
-    # Move 0.5 meters in x-axis at a speed of 0.5 m/s
+    # Move forward x_val meters, then back to the start (at speed_xy m/s)
     ep_chassis.move(x=x_val, y=0, z=0, xy_speed=speed_xy).wait_for_completed()
     time.sleep(1)
-
-    # Return to initial position at a speed of 0.5 m/s
     ep_chassis.move(x=-x_val, y=0, z=0, xy_speed=speed_xy).wait_for_completed()
     time.sleep(1)
 
-    # Move 0.6 meters in y-axis at a speed of 0.5 m/s
+    # Move left y_val meters, then back to the start
     ep_chassis.move(x=0, y=-y_val, z=0, xy_speed=speed_xy).wait_for_completed()
     time.sleep(1)
-
-    # Return to initial position at a speed of 0.5 m/s
     ep_chassis.move(x=0, y=y_val, z=0, xy_speed=speed_xy).wait_for_completed()
     time.sleep(1)
 
-    # Rotate 90º to the left at a speed of 45º/s
+    # Rotate z_val degrees left, then back to the start (at speed_z º/s)
     ep_chassis.move(x=0, y=0, z=z_val, z_speed=speed_z).wait_for_completed()
     time.sleep(1)
-
-    # Rotate 90º to the right at a speed of 45º/s
     ep_chassis.move(x=0, y=0, z=-z_val, z_speed=speed_z).wait_for_completed()
     time.sleep(1)
 

@@ -2,27 +2,25 @@ from robomaster import robot
 
 
 def connect(connection='networking'):
-    """
-    Connect to RoboMaster using networking mode. You must first run the \
-        connect.py script and scan the QR code with the robot. A txt named \
-        'serial_number.txt' should exist and contain the serial number of \
-        the robot.
-    :param image: type of connection. Options are: 'networking' (Router), 'wifi' (Wi-Fi), 'usb' (USB).
-    :return:
-        ep_robot: RoboMaster object with connection established.
-    """
-    mapping = {'networking': 'sta', 'wifi': 'ap', 'usb': 'rndis'}
+    """Connect to the RoboMaster and return the robot object.
 
-    # Get serial number
+    Run connect.py once and scan the QR code so the robot joins your network.
+    In 'networking' mode the robot is found by the serial number saved in
+    'serial_number.txt' (created by connect.py).
+    :param connection: 'networking' (router), 'wifi' (direct Wi-Fi) or 'usb'.
+    :return: ep_robot, a connected RoboMaster object.
+    """
+    conn_types = {'networking': 'sta', 'wifi': 'ap', 'usb': 'rndis'}
+
+    # In networking mode the robot is identified by its serial number
+    serial_number = None
     if connection == 'networking':
         with open('serial_number.txt', 'r') as f:
-            SERIAL_NUMBER = f.read()
-    else:
-        SERIAL_NUMBER = None
+            serial_number = f.read()
 
-    # Start connection
+    # Start the connection
     ep_robot = robot.Robot()
-    ep_robot.initialize(conn_type=mapping[connection], sn=SERIAL_NUMBER)
+    ep_robot.initialize(conn_type=conn_types[connection], sn=serial_number)
     return ep_robot
 
 
@@ -50,20 +48,20 @@ if __name__ == '__main__':
     # Move gimbal to initial position: pitch=0, yaw=0
     ep_gimbal.moveto(pitch=0, yaw=0).wait_for_completed()
 
-    # Move the gimbal 30º to the right 3 consecutive times
+    # Move the gimbal right yaw_valº three times in a row
     ep_gimbal.move(pitch=0, yaw=yaw_val).wait_for_completed()
     ep_gimbal.move(pitch=0, yaw=yaw_val).wait_for_completed()
     ep_gimbal.move(pitch=0, yaw=yaw_val).wait_for_completed()
 
-    # Move the gimbal 30º to the right 3 consecutive times
+    # Move the gimbal left yaw_valº three times in a row
     ep_gimbal.move(pitch=0, yaw=-yaw_val).wait_for_completed()
     ep_gimbal.move(pitch=0, yaw=-yaw_val).wait_for_completed()
     ep_gimbal.move(pitch=0, yaw=-yaw_val).wait_for_completed()
 
-    # Move up the gimbal 15º
+    # Tilt the gimbal up pitch_valº
     ep_gimbal.move(pitch=pitch_val, yaw=0).wait_for_completed()
 
-    # Move down the gimbal 15º
+    # Tilt the gimbal down pitch_valº
     ep_gimbal.move(pitch=-pitch_val, yaw=0).wait_for_completed()
 
     # Move gimbal to initial position: pitch=0, yaw=0
