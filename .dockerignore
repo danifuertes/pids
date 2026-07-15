@@ -1,0 +1,22 @@
+# pixi environments (5.7G) - the image installs its own deps from pyproject.toml
+.pixi/
+pixi.lock
+
+.git/
+.vscode/
+**/__pycache__/
+**/*.pyc
+**/.ipynb_checkpoints/
+
+# Datasets and trained models are mounted at run time, not baked in.
+# These patterns are anchored to the context root on purpose: docker strips the
+# trailing slash from a pattern, so an unanchored '**/data_*' would also exclude
+# week1/data_aug.ipynb.
+data_*
+models
+src/pids/data_*
+src/pids/models
+
+# not part of this image
+src/pids/week3/
+src/pids/demo/
