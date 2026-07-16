@@ -1,4 +1,4 @@
-FROM quay.io/jupyter/pytorch-notebook:x86_64-cuda12-8890fc557a2c
+FROM danielfuertes/jupyter-k8s:latest
 
 # Opencv-python (non-headless)
 USER root
