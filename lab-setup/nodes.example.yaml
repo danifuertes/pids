@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# Lab computers where the week 3 code is deployed by lab-setup/deploy.sh.
+#
+# Copy this file and fill in the real values:
+#
+#     cp lab-setup/nodes.example.yaml lab-setup/nodes.yaml
+#     chmod 600 lab-setup/nodes.yaml        # it contains passwords
+#
+# nodes.yaml is git-ignored on purpose. Never commit it.
+#
+# Rules:
+#   * Every node is one entry under "nodes": its IP address or its DNS name.
+#   * "defaults" holds the account used to log into all of them.
+#   * Delete the password (or leave it empty) to use SSH key authentication
+#     instead. The master already distributes its key to every node, see
+#     jupyter-k8s/autoinstall/autoinstall.sh.
+#   * Values may be wrapped in double quotes. Quote any password that contains
+#     spaces or a '#'. Passwords cannot contain tab characters.
+#   * The master node itself is not listed here: the script runs on it.
+# ---------------------------------------------------------------------------
+
+defaults:
+  user: <user>
+  password: "<worker-password>"
+
+nodes:
+  - node.1.ip.address
+  - node.2.ip.address
+  - ...

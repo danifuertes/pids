@@ -12,3 +12,6 @@ models
 
 # demo
 src/pids/demo/
+
+# lab setup
+lab-setup/nodes.yaml
