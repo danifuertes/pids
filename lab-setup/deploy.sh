@@ -10,21 +10,27 @@
 #
 # For every node it:
 #   1. DELETES /home/<user>/robomaster        <- last course's edits are lost
-#   2. creates it again, empty
-#   3. installs the python environment with pixi
-#   4. copies src/pids/week3/  -> /home/<user>/robomaster/week3
-#   5. copies labelimg/labelimg.sh -> /home/<user>/robomaster/labeling/
+#   2. copies src/pids/week3/  -> /home/<user>/robomaster/week3
+#   3. installs the python environment with pixi, inside week3/
+#   4. copies labelimg/labelimg.sh -> /home/<user>/robomaster/labeling/
 #
 # The result is a flat folder the students can just open; the src/pids/ layout
 # of this repository is not reproduced there.
 #
 #     /home/<user>/robomaster/
-#         pyproject.toml      the environment  (run "pixi shell" here)
-#         pixi.lock
-#         .pixi/              built by pixi on the node, not copied
-#         week3/              the code the students edit
-#         models/             where their week 2 checkpoint goes
+#         week3/                    the folder the students open in VS Code
+#             *.py, audio/, ...     the code they edit
+#             pyproject.toml        the environment  (run "pixi shell" here)
+#             pixi.lock
+#             .pixi/                built by pixi on the node, not copied
+#             .vscode/settings.json points the debugger at .pixi, hides the rest
+#         models/                   where their week 2 checkpoint goes
 #         labeling/labelimg.sh
+#
+# The environment sits inside week3/ because that is the folder the students
+# open: the VS Code python extension only looks for .pixi/envs/ inside the
+# workspace folder, so an environment one level up is not picked up and the
+# debugger silently falls back to the system python.
 #
 # The environment is the repository's own pyproject.toml, with the editable
 # install of the "pids" package removed on the fly: that dependency needs
@@ -70,6 +76,8 @@ TAR_EXCLUDES=(
     '--exclude=*.pyc'
     '--exclude=serial_number.txt'   # written by connect.py, robot-specific
     '--exclude=predictions'         # output of plot_predictions()
+    '--exclude=.pixi'               # an environment belongs to a node, not here
+    '--exclude=.vscode'             # written below, per node
 )
 
 # ---------------------------------------------------------------------------
@@ -94,8 +102,8 @@ usage() {
 Usage: ${0##*/} [options] [host ...]
 
 Regenerates /home/<user>/$DEST_NAME on the lab computers listed in
-${CONFIG_FILE#"$REPO_DIR"/}: the old folder is deleted, the pixi environment is
-installed, and week3/, models/ and labeling/ are created inside it.
+${CONFIG_FILE#"$REPO_DIR"/}: the old folder is deleted and week3/ (with its pixi
+environment inside), models/ and labeling/ are created again.
 
 With no hosts, every node in the config is deployed.
 
@@ -290,10 +298,10 @@ ssh_exec() {
 # ---------------------------------------------------------------------------
 # Python environment
 #
-# pixi keeps the environment inside the project folder (robomaster/.pixi), so
-# it is deleted and rebuilt with the rest of the folder. Rebuilding downloads a
-# couple of GB per node, which is why an environment that is already there is
-# only rebuilt when asked for.
+# pixi keeps the environment next to its manifest (week3/.pixi), so it is
+# deleted and rebuilt with the code. Rebuilding downloads a couple of GB per
+# node, which is why an environment that is already there is only rebuilt when
+# asked for: keeping it means wiping everything except week3/.pixi.
 # ---------------------------------------------------------------------------
 
 ENV_CHOICE=""   # "", "all" or "none": answer remembered for the rest of the run
@@ -321,9 +329,15 @@ want_env_rebuild() {
     esac
 }
 
-# The remote half of "pixi install". pixi is installed on the fly when the node
-# does not have it yet; its installer puts it in ~/.pixi/bin, which a
-# non-interactive ssh session does not have in PATH.
+# The remote half of "pixi install". Two different ".pixi" folders are involved:
+#
+#   ~/.pixi/bin/pixi            the pixi TOOL, installed on the fly when the
+#                               node does not have it yet. Its installer puts it
+#                               there, and a non-interactive ssh session does
+#                               not have that folder in PATH, hence the export.
+#   <dest>/.pixi/envs/default   the ENVIRONMENT, created by "pixi install" next
+#                               to the manifest, which is why it runs from
+#                               /home/<user>/robomaster/week3.
 PIXI_INSTALL_SNIPPET='set -e
 export PATH="$HOME/.pixi/bin:$PATH"
 if ! command -v pixi >/dev/null 2>&1; then
@@ -334,16 +348,32 @@ fi
 cd "__DEST__"
 pixi install'
 
+# Written into week3/.vscode/settings.json on every node. It pins the
+# interpreter (the extension's own auto-detection needs the workspace to be
+# opened exactly on week3/) and hides the pixi plumbing from the explorer.
+VSCODE_SETTINGS='{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.pixi/envs/default/bin/python",
+    "files.exclude": {
+        "**/.pixi": true,
+        "pixi.lock": true,
+        "pyproject.toml": true
+    },
+    "python.languageServer": "Pylance",
+    "python.analysis.indexing": true
+}'
+
 # deploy_node <host> <user> <password>
 deploy_node() {
     local host=$1 user=$2 password=$3
     local home="/home/$user"
     local dest="$home/$DEST_NAME"
+    local work="$dest/week3"        # code and environment both live here
 
     if (( DRY_RUN )); then
         info "would delete  $user@$host:$dest"
-        info "would install the pixi environment in $dest (asked per node when one is already there)"
-        info "would copy    ${WEEK3_SRC#"$REPO_DIR"/}/ -> $dest/week3"
+        info "would copy    ${WEEK3_SRC#"$REPO_DIR"/}/ -> $work"
+        info "would install the pixi environment in $work (asked per node when one is already there)"
+        info "would write   $work/.vscode/settings.json"
         info "would create  $dest/models (empty, for the week 2 checkpoint)"
         info "would copy    ${LABELIMG_SRC#"$REPO_DIR"/} -> $dest/labeling/labelimg.sh"
         return 0
@@ -357,54 +387,35 @@ deploy_node() {
 
     # Is there an environment there already?
     local has_env=0
-    ssh_exec "$host" "$user" "$password" "test -d '$dest/.pixi/envs'" </dev/null 2>/dev/null && has_env=1
+    ssh_exec "$host" "$user" "$password" "test -d '$work/.pixi/envs'" </dev/null 2>/dev/null && has_env=1
 
     local rebuild_env=0
     want_env_rebuild "$host" "$has_env" && rebuild_env=1
 
     # 1. Remove the previous content. Everything the students left goes away,
     #    the week 2 checkpoints in models/ included; only the environment
-    #    survives, and only when it is not being rebuilt.
+    #    survives, and only when it is not being rebuilt. Keeping it means
+    #    emptying robomaster/ except week3/, and week3/ except .pixi -- which
+    #    exists whenever has_env is 1, the only way to reach this branch.
     local wipe
     if (( rebuild_env )); then
         wipe="rm -rf '$dest'"
     else
-        wipe="find '$dest' -mindepth 1 -maxdepth 1 ! -name .pixi -exec rm -rf {} +"
+        wipe="find '$dest' -mindepth 1 -maxdepth 1 ! -name week3 -exec rm -rf {} + &&
+              find '$work' -mindepth 1 -maxdepth 1 ! -name .pixi -exec rm -rf {} +"
     fi
     if ! ssh_exec "$host" "$user" "$password" "$wipe" </dev/null; then
         err "$host: could not clean $dest"
         return 1
     fi
 
-    # 2. Create the folder again
-    if ! ssh_exec "$host" "$user" "$password" "mkdir -p '$dest'" </dev/null; then
-        err "$host: could not create $dest"
+    # 2. Copy week3 in. models/ is created next to it, empty: demo.py reads the
+    #    checkpoint as '../models/<model>/model_best.pt', relative to week3/.
+    if ! ssh_exec "$host" "$user" "$password" "mkdir -p '$work' '$dest/models'" </dev/null; then
+        err "$host: could not create $work"
         return 1
     fi
 
-    # 3. Install the environment. The manifest is copied first: it is what pixi
-    #    reads. When the environment is kept, the manifest is still refreshed,
-    #    so re-run with --force-env after changing pyproject.toml.
-    if ! tar -C "$MANIFEST_DIR" -cf - "${MANIFEST_FILES[@]}" \
-         | ssh_exec "$host" "$user" "$password" "tar -C '$dest' -xf -"; then
-        err "$host: could not copy the pixi manifest"
-        return 1
-    fi
-
-    if (( rebuild_env )); then
-        info "installing the pixi environment (this downloads a couple of GB)"
-        if ! ssh_exec "$host" "$user" "$password" \
-                "${PIXI_INSTALL_SNIPPET//__DEST__/$dest}" </dev/null; then
-            err "$host: pixi install failed"
-            return 1
-        fi
-    else
-        info "pixi environment kept (--force-env rebuilds it)"
-    fi
-
-    # 4. Copy week3 into the folder, next to an empty models/ where the
-    #    students drop the checkpoint they trained in week 2. demo.py reads it
-    #    as '../models/<model>/model_best.pt', relative to week3/.
     if ! tar -C "$(dirname "$WEEK3_SRC")" "${TAR_EXCLUDES[@]}" \
              -cf - "$(basename "$WEEK3_SRC")" \
          | ssh_exec "$host" "$user" "$password" "tar -C '$dest' -xf -"; then
@@ -412,8 +423,33 @@ deploy_node() {
         return 1
     fi
 
-    ssh_exec "$host" "$user" "$password" "mkdir -p '$dest/models'" </dev/null \
-        || warn "$host: could not create $dest/models"
+    # 3. Install the environment. The manifest is copied first: it is what pixi
+    #    reads. When the environment is kept, the manifest is still refreshed,
+    #    so re-run with --force-env after changing pyproject.toml.
+    if ! tar -C "$MANIFEST_DIR" -cf - "${MANIFEST_FILES[@]}" \
+         | ssh_exec "$host" "$user" "$password" "tar -C '$work' -xf -"; then
+        err "$host: could not copy the pixi manifest"
+        return 1
+    fi
+
+    if (( rebuild_env )); then
+        info "installing the pixi environment (this downloads a couple of GB)"
+        if ! ssh_exec "$host" "$user" "$password" \
+                "${PIXI_INSTALL_SNIPPET//__DEST__/$work}" </dev/null; then
+            err "$host: pixi install failed"
+            return 1
+        fi
+    else
+        info "pixi environment kept (--force-env rebuilds it)"
+    fi
+
+    # 4. Point VS Code at that environment
+    if ! printf '%s\n' "$VSCODE_SETTINGS" \
+         | ssh_exec "$host" "$user" "$password" \
+               "mkdir -p '$work/.vscode' && cat > '$work/.vscode/settings.json'"; then
+        err "$host: could not write $work/.vscode/settings.json"
+        return 1
+    fi
 
     # 5. Copy labelimg.sh into its own folder
     if ! ssh_exec "$host" "$user" "$password" \
