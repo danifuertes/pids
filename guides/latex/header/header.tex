@@ -1,0 +1,34 @@
+% ---------------- HEADER ----------------
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\setlength{\headsep}{35pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+% Line
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{
+\hbox to\headwidth{
+  \color{gray}\leaders\hrule height \headrulewidth\hfill}
+}
+
+% Center (left header)
+\fancyhead[L]{
+    \begin{minipage}{10cm}
+        \scriptsize \textbf{Proyectos en Ingeniería de Datos y Sistemas (PIDS)}\\
+        \scriptsize Proyecto 2: Sistema de detección de vehículos y conducción autónoma
+    \end{minipage}
+}
+
+% Right: group/university + logo aligned horizontally
+\fancyhead[R]{
+    \begin{minipage}{5.2cm}
+        \scriptsize \textbf{Universidad Politécnica de Madrid}\\
+        \scriptsize Grupo de Tratamiento de Imágenes
+    \end{minipage}
+    \raisebox{-0.3\height}{
+        \includegraphics[height=0.8cm]{header/logo_upm.pdf}
+    }
+}

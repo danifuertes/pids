@@ -1,0 +1,231 @@
+% =============================================================================
+%  PIDS - Proyecto 2: Sistema de detección de vehículos y conducción autónoma
+%  Bloque 2: Entrenamiento, validación y evaluación de redes neuronales
+%
+%  Compilar desde este directorio (guides/PIDS):
+%      pdflatex guide2.tex   (dos veces, para resolver las referencias)
+% =============================================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper, total={7in, 9.75in}, bottom=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{framed}
+\usepackage{hyperref}
+
+% Rótulos en español (el documento lo está)
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabla}
+
+% El logo del encabezado vive en ../header
+\graphicspath{{./}{../}}
+
+\input{header/header.tex}
+
+\begin{document}
+
+% =============================================================================
+%  Título
+% =============================================================================
+\begin{center}
+    \vspace*{.15cm}
+    {\Huge \bfseries Bloque 2: Entrenamiento, validación y evaluación de redes neuronales} \\[0.5cm]
+\end{center}
+
+
+% =============================================================================
+\section{Introducción}
+\label{sec:semana2-intro}
+% =============================================================================
+
+En este segundo bloque entrenaremos una red neuronal (\textit{modelo}) para detectar RoboMasters en las imágenes que anotamos en el Bloque 1. Usaremos \underline{\textbf{PyTorch}} junto con \textit{torchvision}, que proporciona modelos de detección de objetos ya implementados.
+
+Un detector recibe una imagen y devuelve, para cada objeto que encuentra, una caja (\textit{dónde} está el objeto) y una etiqueta con una confianza (\textit{qué} es ese objeto). En lugar de aprender todo esto desde cero, partiremos de modelos \textbf{preentrenados} sobre grandes bases de datos y solo readaptaremos su parte final a nuestras clases. Esta técnica, conocida como \underline{\textbf{transfer learning}}, permite obtener buenos resultados con muchas menos imágenes y en mucho menos tiempo.
+
+A lo largo del bloque aprenderá a preparar los datos para la red, elegir y configurar un modelo, entrenarlo, validarlo mientras entrena y evaluarlo sobre secuencias que nunca ha visto.
+
+
+% =============================================================================
+\section{Punto de partida}
+\label{sec:semana2-jupyterhub}
+% =============================================================================
+
+Seguiremos trabajando en el JupyterHub del laboratorio (\url{https://k8ssr.labdoc.ssr.upm.es:30000}, perfil \textit{PIDS}). Si completó correctamente el Bloque 1, su perfil debería tener esta estructura:
+
+\begin{verbatim}
+    data_train/          <- SUS secuencias, anotadas y depuradas
+        video1/
+            images/
+            labels/
+        video2/
+            ...
+    data_val/            <- secuencias de validación (proporcionadas)
+    data_test/           <- secuencias de test (proporcionadas)
+    models/              <- se creará sola al entrenar
+    week1/
+    week2/
+        train.ipynb
+        test.ipynb
+\end{verbatim}
+
+Trabajaremos con los dos notebooks de \textit{week2}: \underline{train.ipynb} para entrenar y validar, y \underline{test.ipynb} para evaluar.
+
+% =============================================================================
+\section{Entrenamiento: \textit{train.ipynb}}
+\label{sec:semana2-train}
+% =============================================================================
+
+Abra \textit{week2/train.ipynb} y ejecute las primeras celdas para importar las librerías. La sección \textit{Utils functions} contiene funciones auxiliares que se usan a lo largo de todo el notebook; no es imprescindible entenderlas todas, pero sí es recomendable leer sus \textit{docstrings}. Además, la función \textit{torchvision\_model} contiene los modelos disponibles en el notebook.
+
+% -----------------------------------------------------------------------------
+\subsection{Generador de datos}
+\label{sec:semana2-data}
+% -----------------------------------------------------------------------------
+
+Cuando la base de datos tiene miles de imágenes, es inviable cargarlas todas en memoria y procesarlas a la vez. En su lugar se usan \textbf{generadores de datos}, que van entregando a la red subconjuntos de imágenes anotadas llamados \textit{batches}. Cuando se han procesado todas las imágenes de la base de datos, se dice que la red ha entrenado durante un \textit{epoch}. Conseguir un buen aprendizaje suele requerir decenas o centenares de epochs.
+
+En PyTorch esto se reparte entre dos piezas que conviene no confundir:
+
+\begin{itemize}
+    \item El \textit{Dataset} (clase \textit{CustomDataset}) carga \textbf{una} muestra: abre la imagen, lee sus anotaciones y aplica el preprocesado.
+    \item El \textit{DataLoader} agrupa varias muestras en un \textbf{batch} y se lo pasa a la red.
+\end{itemize}
+
+Estudie el método \textit{\_\_getitem\_\_} y compruebe el formato exacto de lo que devuelve, porque debe coincidir con lo que espera el modelo: la imagen como tensor y un diccionario con \textit{boxes} (coordenadas [x\_min, y\_min, x\_max, y\_max]) y \textit{labels}. Preste atención también a \textit{get\_transform}: explique qué preprocesado se aplica a las imágenes y por qué.
+
+% -----------------------------------------------------------------------------
+\subsection{Modelos y transfer learning}
+\label{sec:semana2-models}
+% -----------------------------------------------------------------------------
+
+La función \textit{torchvision\_model} contiene un diccionario con los modelos disponibles: \textit{faster\_rcnn\_v1}, \textit{faster\_rcnn\_v2}, \textit{faster\_rcnn\_v3}, \textit{retinanet\_v1}, \textit{retinanet\_v2}, \textit{ssd\_v1} y \textit{ssd\_v2}. Use estas claves en el parámetro \textit{model\_name} para elegir qué red entrenar.
+
+\begin{framed}
+    Esas claves son solo nombres cómodos: el nombre real de cada modelo es el que aparece en los valores del diccionario. \underline{En la memoria no queremos leer \textit{faster\_rcnn\_v1}}, sino \textit{Faster R-CNN con un backbone ResNet50-FPN}.
+\end{framed}
+
+No se espera que entienda al detalle el funcionamiento interno de estas arquitecturas. Basta con que, de cada modelo que llegue a comparar, sepa explicar en unas pocas frases en qué familia se encuadra, qué idea lo caracteriza y en qué se diferencia de los demás. Investigue también qué es un \textit{backbone}, qué papel cumple dentro de un detector y por qué se habla de él por separado del resto de la red.
+
+La misma función implementa el transfer learning. Con \textit{pretrained = True}, el modelo se construye con los pesos aprendidos sobre COCO, una base de datos de propósito general con decenas de miles de imágenes; a continuación se \textbf{sustituye su cabeza de clasificación} (las capas finales de predicción) por una nueva, adaptada a nuestro problema. De ahí que \textit{num\_classes} sea siempre $2$: la clase $0$ es el fondo y la $1$, el robot. El resto de la red conserva lo que ya sabía sobre bordes, texturas y formas, y solo tiene que ajustarlo a nuestro objeto.
+
+% -----------------------------------------------------------------------------
+\subsection{Hiperparámetros}
+\label{sec:semana2-params}
+% -----------------------------------------------------------------------------
+
+La sección \textit{Parameters} reúne todo lo que puede configurar, agrupado en cuatro bloques:
+
+\begin{itemize}
+    \item \textbf{Datos:} las rutas a \textit{data\_train} y \textit{data\_val}.
+    \item \textbf{Modelo:} \textit{model\_name}, \textit{num\_classes}, \textit{pretrained}, \textit{use\_gpu} y \textit{resize\_shape} (tamaño al que se redimensionan las imágenes, o \textit{None} para dejarlas como están).
+    \item \textbf{Entrenamiento:} \textit{num\_epochs}, \textit{batch\_size} y \textit{num\_workers}. Deje \textit{num\_workers} como está.
+    \item \textbf{Optimizador:} el learning rate (\textit{lr}) y los parámetros del SGD y del \textit{learning rate scheduler} (\textit{lr\_factor}, \textit{lr\_patience}, \textit{lr\_threshold}, \textit{lr\_min}). También \textit{max\_grad\_norm}, que limita la norma de los gradientes; solo hace falta para SSD.
+\end{itemize}
+
+La variable \textit{SEED} fija todas las fuentes de aleatoriedad para que dos ejecuciones idénticas den exactamente el mismo resultado. No la cambie si quiere poder comparar experimentos entre sí.
+
+El modelo se guarda en \textit{models/\{model\_name\}/}, en dos archivos con propósitos distintos:
+
+\begin{itemize}
+    \item \textit{model\_last.pt}: se guarda \textbf{en cada epoch} y sirve para retomar un entrenamiento interrumpido por donde iba.
+    \item \textit{model\_best.pt}: el modelo con la \textbf{menor pérdida de validación} hasta el momento. Es el que se usará para evaluar.
+\end{itemize}
+
+\begin{framed}
+    \textbf{IMPORTANTE}: si vuelve a entrenar con el mismo \textit{model\_name}, el notebook encontrará el \textit{model\_last.pt} anterior y \underline{continuará aquel entrenamiento} en lugar de empezar uno nuevo. Para arrancar de cero, cambie el nombre del modelo o borre (o renombre) su carpeta. Antes de lanzar cada prueba, asegúrese de que no está sobrescribiendo un modelo que quiera conservar.
+\end{framed}
+
+% -----------------------------------------------------------------------------
+\subsection{Bucle de entrenamiento}
+\label{sec:semana2-train-loop}
+% -----------------------------------------------------------------------------
+
+Las primeras celdas de la sección \textit{Train} crean el modelo, el optimizador, el \textit{learning rate scheduler} (investigue qué es y para qué sirve) y los generadores de datos de entrenamiento y validación. La celda siguiente contiene el bucle de entrenamiento. En cada epoch se hace lo siguiente:
+
+\begin{enumerate}
+    \item Poner el modelo en modo de entrenamiento.
+    \item Extraer un batch del generador de entrenamiento y moverlo a la GPU (o a la CPU).
+    \item Predecir y obtener la función de coste. En modo de entrenamiento, los modelos de torchvision devuelven directamente las pérdidas, sin necesidad de calcularlas aparte.
+    \item Poner a cero los gradientes acumulados en el optimizador.
+    \item Aplicar \textit{backpropagation} para calcular los gradientes.
+    \item Limitar la norma de los gradientes (solo para algunas redes).
+    \item Dejar que el optimizador actualice los pesos a partir de esos gradientes.
+    \item Repetir los pasos 2--7 hasta agotar la base de datos.
+    \item Recorrer el conjunto de validación calculando la pérdida \textbf{sin} actualizar los pesos.
+    \item Actualizar el learning rate scheduler y guardar los checkpoints.
+\end{enumerate}
+
+Por último, las celdas finales dibujan las curvas de pérdidas de entrenamiento y validación y la evolución del learning rate. Sepa leerlas: qué información aporta cada una y qué significa su forma (creciente, decreciente, plana, ruidosa, separada entre entrenamiento y validación\dots). Las comentará al presentar sus experimentos.
+
+\begin{framed}
+    \textbf{IMPORTANTE}: pruebe el notebook hasta tener algo que funcione y solo entonces lance el entrenamiento completo. Un entrenamiento puede llevar en torno a una hora, y si cierra el navegador o pierde la conexión se detendrá (no es grave: guardamos un checkpoint en cada epoch y podrá retomarlo).
+
+    Para evitarlo, puede lanzar el entrenamiento en segundo plano. Pulse Ctrl+Shift+L, abra un Terminal y ejecute:
+
+    \begin{center}
+        \texttt{papermill train.ipynb \{nombre-del-experimento\}.ipynb}
+    \end{center}
+
+    Abra de vez en cuando el notebook generado para ver por qué epoch va. Puede cerrar el navegador, pero \textbf{no cierre la pestaña del Terminal}. Para detener el entrenamiento, pulse Ctrl+C y cierre el Terminal.
+
+    Ponga a cada notebook un nombre que describa la prueba que está haciendo: le servirá de registro de experimentos. Si quiere encadenar varias pruebas de una vez, consulte la documentación de \href{https://papermill.readthedocs.io/en/latest/index.html}{papermill} y, en particular, cómo \href{https://papermill.readthedocs.io/en/latest/usage-parameterize.html}{parametrizar} y \href{https://papermill.readthedocs.io/en/latest/usage-execute.html}{ejecutar} notebooks.
+\end{framed}
+
+
+% =============================================================================
+\section{Evaluación: \textit{test.ipynb}}
+\label{sec:semana2-test}
+% =============================================================================
+
+Evaluar consiste en medir el rendimiento del modelo sobre un conjunto de datos que \textbf{no ha visto durante el entrenamiento}: las secuencias de \textit{data\_test}. El notebook \textit{test.ipynb} es muy parecido al anterior y reutiliza sus mismas funciones auxiliares y su mismo generador de datos, de forma que el modelo vea las imágenes exactamente igual que cuando aprendió. Indique el modelo a evaluar en \textit{model\_name} (se cargará automáticamente su \textit{model\_best.pt}) y ejecute el notebook entero.
+
+\textbf{Análisis cuantitativo.} La métrica estándar en detección de objetos es la \textit{mean Average Precision} (mAP). Investigue cómo se calcula esta métrica y qué mide exactamente cada una de las variantes que aparecen en el notebook.
+
+\textbf{Análisis cualitativo.} Las métricas resumen el rendimiento en un número, pero pueden esconder algunos errores concretos. Las celdas finales permiten dibujar las predicciones sobre las imágenes. Busque casos en los que el modelo acierte y, sobre todo, casos en los que falle, e intente explicar por qué. Preste atención al parámetro \textit{score\_threshold}: determine para qué sirve y qué ocurre al subirlo y al bajarlo.
+
+
+% =============================================================================
+\section{Objetivos}
+\label{sec:semana2-objetivos}
+% =============================================================================
+
+Partiendo de la base de datos del Bloque 1, debe entrenar un detector de RoboMasters lo más robusto posible y documentar el proceso. Concretamente:
+
+\begin{itemize}
+    \item \textbf{Entender el pipeline:} sea capaz de describir, a grandes rasgos, los módulos del sistema y cómo se conectan entre sí.
+
+    \item \textbf{Conocer los modelos:} empiece por \textit{faster\_rcnn\_v1}. Investigue qué arquitectura es en realidad, qué es un \textit{backbone} y en qué consiste el transfer learning que estamos aplicando. Describa brevemente cada modelo que llegue a comparar. Opcionalmente puede implementar por su cuenta otros modelos y comprobar si funcionan mejor.
+
+    \item \textbf{Entender los hiperparámetros:} sepa explicar qué controla cada uno. Céntrese en el \textbf{batch size}, el \textbf{learning rate} y el \textbf{número de epochs}. Del resto, basta con saber para qué sirven. Tiene pistas sobre el optimizador y el scheduler \href{https://docs.pytorch.org/docs/stable/generated/torch.optim.SGD.html}{aquí} y \href{https://docs.pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html}{aquí}.
+
+    \item \textbf{Entender las métricas:} investigue cómo se calculan la IoU, la precisión, el recall, la AP y la mAP, y qué diferencia hay entre mAP, mAP@0.50 y mAP@0.75.
+
+    \item \textbf{Experimentar}, siguiendo este orden:
+        \begin{enumerate}
+            \item \textbf{Ajuste los hiperparámetros} con un único modelo. Batch size: ¿qué ocurre con valores muy bajos? ¿Y con valores muy altos? ¿Aparece algún error de ejecución? Learning rate: ¿qué ocurre con valores muy bajos? ¿Y muy altos? ¿Afecta al número de epochs necesarios? La gráfica del learning rate le dará pistas. Epochs: ¿hasta cuándo merece la pena entrenar? No malgaste tiempo entrenando hasta el infinito.
+            \item \textbf{Compare varias arquitecturas} dejando fijos esos hiperparámetros, y quédese con la mejor. Si alguna red le da problemas, revise \textit{max\_grad\_norm} y la función \textit{clip\_grad\_norms}, y explique qué hacen y por qué son necesarias.
+            \item \textbf{Añada los datos aumentados} del Bloque 1 al final, reentrenando solo el mejor modelo, para intentar un último empujón en la mAP.
+        \end{enumerate}
+        Este orden importa: entrenar \underline{todos} los experimentos con datos aumentados multiplicaría el tiempo de cómputo sin aportar información nueva. Anote cada prueba que haga, incluidas las que salgan mal.
+
+    \item \textbf{Analizar cualitativamente:} busque imágenes concretas en las que el modelo funcione bien y, sobre todo, imágenes en las que falle, y caracterice \underline{qué tipo} de imágenes le hacen fallar (objetos lejanos, oclusiones, escenas oscuras, desenfoque\dots). Relacione esos fallos con lo que ya sabía de sus datos.
+
+    \item \textbf{(Opcional)} Mida también los tiempos de inferencia, no solo la precisión: le permitirá comparar la velocidad de los modelos, algo que importará en el Bloque 3.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\subsection{Entregable}
+\label{sec:semana2-entregable}
+% -----------------------------------------------------------------------------
+
+La memoria es \textbf{incremental}: se entrega tres veces y, en cada entrega, se corrigen los bloques anteriores y se añade el nuevo. Siga utilizando la plantilla \textit{PIDS-template.docx}. Para esta segunda entrega:
+
+\begin{itemize}
+    \item \textbf{Contenido:} el Bloque 1 corregido y el Bloque 2 completo. Rellene también la tabla ``Respuesta a la revisión anterior'': su ausencia penaliza la nota.
+    \item \textbf{Extensión máxima:} 20 páginas de cuerpo, contando el Bloque 1. No cuentan la portada, el índice, la respuesta a la revisión anterior, el reparto del trabajo, las referencias ni los anexos.
+    \item \textbf{Fichero:} un único PDF llamado \underline{\textbf{PIDS\_grupoX\_entregaN.pdf}}, donde X es el número de grupo y N el de la entrega. Por ejemplo, el grupo 3 entregaría \textit{PIDS\_grupo3\_entrega2.pdf}.
+\end{itemize}
+
+Se valorará que las pruebas realizadas tengan sentido y estén fundamentadas, y que las conclusiones se apoyen en resultados medidos y no en intuiciones.
+
+\end{document}
