@@ -24,6 +24,5 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
 
 # Add contents
 COPY --chown=root:root src/pids/week1/ /opt/pids/week1/
-COPY --chown=root:root src/pids/week2/ /opt/pids/week2/
-COPY --chown=root:root --chmod=755 docker/contents.sh \
-     /usr/local/bin/before-notebook.d/contents.sh
+COPY --chown=root:root src/pids/week2/train.ipynb src/pids/week2/test.ipynb /opt/pids/week2/
+COPY --chown=root:root --chmod=755 docker/contents.sh /usr/local/bin/before-notebook.d/contents.sh
