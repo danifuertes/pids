@@ -5,7 +5,7 @@
 # Run it ON THE MASTER NODE, from a clone of this repository:
 #
 #     lab-setup/deploy.sh                    # every node in nodes.yaml
-#     lab-setup/deploy.sh 192.0.2.10       # only these nodes
+#     lab-setup/deploy.sh <ip-address>       # only these nodes
 #     lab-setup/deploy.sh --dry-run          # show what it would do, change nothing
 #
 # For every node it:
@@ -37,6 +37,13 @@
 # src/pids/, which is deliberately not deployed. There is no second dependency
 # list to keep in sync -- edit pyproject.toml and re-run this script.
 #
+# For the same reason the scripts cannot import through that package, so the
+# imports are rewritten on the way out:
+#
+#     from pids.week3.demo_utils import *   ->   from demo_utils import *
+#
+# The repository keeps its package layout; only the deployed copy is flat.
+#
 # Installing the environment is the slow part, so when one is already present
 # the script asks whether to rebuild it (--force-env answers yes in advance).
 #
@@ -52,10 +59,15 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_DIR/nodes.yaml}"
 DEST_NAME="robomaster"
 WEEK3_SRC="$REPO_DIR/src/pids/week3"
+WEEK3_DISPLAY="src/pids/week3"      # WEEK3_SRC moves to a staging copy below
 LABELIMG_SRC="$REPO_DIR/labelimg/labelimg.sh"
 PYPROJECT_SRC="$REPO_DIR/pyproject.toml"
 MANIFEST_DIR=""                     # staging dir, filled in by prepare_manifest
 MANIFEST_FILES=(pyproject.toml)     # pixi.lock is added when one is generated
+
+TEMP_DIRS=()                        # staging folders, removed on exit
+cleanup() { (( ${#TEMP_DIRS[@]} )) && rm -rf "${TEMP_DIRS[@]}"; }
+trap cleanup EXIT
 
 ASSUME_YES=0
 DRY_RUN=0
@@ -253,7 +265,7 @@ fi
 
 prepare_manifest() {
     MANIFEST_DIR=$(mktemp -d) || die "could not create a temporary folder"
-    trap 'rm -rf "$MANIFEST_DIR"' EXIT
+    TEMP_DIRS+=("$MANIFEST_DIR")
 
     awk '
         /^[[:space:]]*\[/ { table = $0; sub(/^[[:space:]]+/, "", table) }
@@ -276,6 +288,51 @@ prepare_manifest() {
     else
         warn "pixi lock failed: every node will solve the environment on its own"
     fi
+}
+
+# ---------------------------------------------------------------------------
+# Code
+#
+# The scripts are deployed flat, without the src/pids/ package around them and
+# without that package installed in the environment, so an import that goes
+# through it cannot work on a node:
+#
+#     from pids.week3.demo_utils import *   ->   from demo_utils import *
+#
+# demo.py sits next to demo_utils.py there, and python puts the folder of the
+# script it runs first on sys.path, so the short form resolves -- when running
+# the file, when debugging it in VS Code, and in a notebook in the same folder.
+#
+# The rewrite happens here, once, on a copy: the repository keeps importing
+# through the package as it does today, and every node gets the same bytes.
+# ---------------------------------------------------------------------------
+
+prepare_code() {
+    local staging
+    staging=$(mktemp -d) || die "could not create a temporary folder"
+    TEMP_DIRS+=("$staging")
+
+    cp -a "$WEEK3_SRC" "$staging/" || die "could not stage $WEEK3_DISPLAY"
+    WEEK3_SRC="$staging/$(basename "$WEEK3_SRC")"
+
+    # Only import lines are touched, in .py and in the source cells of .ipynb
+    # (where the line is wrapped in a JSON string, hence the optional quote).
+    local file rewritten=0
+    while IFS= read -r -d '' file; do
+        grep -qE '^[[:space:]]*"?(from|import)[[:space:]].*\bpids\.week3\.' "$file" || continue
+        sed -i -E '/^[[:space:]]*"?(from|import)[[:space:]]/ s/\bpids\.week3\.//g' "$file" \
+            || die "could not rewrite the imports of ${file##*/}"
+        rewritten=$(( rewritten + 1 ))
+    done < <(find "$WEEK3_SRC" -type f \( -name '*.py' -o -name '*.ipynb' \) -print0)
+
+    (( rewritten )) && info "rewrote the pids.week3 imports of $rewritten file(s)"
+
+    # Nothing may still reach for the package: it is not deployed anywhere
+    local leftovers
+    leftovers=$(grep -rlE '^[[:space:]]*"?(from|import)[[:space:]]+pids\b' "$WEEK3_SRC" 2>/dev/null \
+                | sed "s|^$WEEK3_SRC/||" | tr '\n' ' ')
+    [[ -z ${leftovers// /} ]] \
+        || warn "still importing the pids package, which the nodes do not have: $leftovers"
 }
 
 # ---------------------------------------------------------------------------
@@ -371,7 +428,7 @@ deploy_node() {
 
     if (( DRY_RUN )); then
         info "would delete  $user@$host:$dest"
-        info "would copy    ${WEEK3_SRC#"$REPO_DIR"/}/ -> $work"
+        info "would copy    $WEEK3_DISPLAY/ -> $work  (pids.week3 imports rewritten)"
         info "would install the pixi environment in $work (asked per node when one is already there)"
         info "would write   $work/.vscode/settings.json"
         info "would create  $dest/models (empty, for the week 2 checkpoint)"
@@ -468,7 +525,7 @@ deploy_node() {
 # ---------------------------------------------------------------------------
 
 echo
-echo "${BOLD}Code${RESET}    ${WEEK3_SRC#"$REPO_DIR"/}/  +  ${LABELIMG_SRC#"$REPO_DIR"/}"
+echo "${BOLD}Code${RESET}    $WEEK3_DISPLAY/  +  ${LABELIMG_SRC#"$REPO_DIR"/}"
 echo "${BOLD}Env${RESET}     ${PYPROJECT_SRC#"$REPO_DIR"/}  (minus the editable \"pids\" install)"
 echo "${BOLD}Config${RESET}  ${CONFIG_FILE#"$REPO_DIR"/}"
 echo "${BOLD}Nodes${RESET}   ${#HOSTS[@]}"
@@ -492,6 +549,7 @@ fi
 # ---------------------------------------------------------------------------
 
 prepare_manifest
+prepare_code
 
 DONE=(); FAILED=()
 

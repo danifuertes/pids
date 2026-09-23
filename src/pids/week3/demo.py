@@ -14,10 +14,10 @@ def detect_and_shoot(ep_robot, model, score_threshold=0.5, resize_shape=None):
              keys 'boxes' (N, 4 as [x_min, y_min, x_max, y_max]), 'scores' (N,) and 'labels' (N,).
     """
 
-    # --- STEP 1: capture the frame and run the detector (done for you) --------
-    image, prediction = predict(ep_robot, model, resize_shape=resize_shape)
+    # --- STEP 1: capture the frame and run the detector --------
+    image, predictions = predict(ep_robot, model, resize_shape=resize_shape)
 
-    # --- STEP 2: choose the best detection (YOUR CODE) ------------------------
+    # --- STEP 2: choose the best detection ------------------------
     # Guides:
     #   * Keep only the boxes whose score is >= score_threshold
     #   * If there is nothing to shoot, `return image, prediction`
@@ -25,18 +25,18 @@ def detect_and_shoot(ep_robot, model, score_threshold=0.5, resize_shape=None):
     #   * Otherwise pick the box with the HIGHEST score
     best_box = ...
 
-    # --- STEP 3: aim the gimbal at the target (YOUR CODE) ---------------------
+    # --- STEP 3: aim the gimbal at the target ---------------------
     # Guides:
     #   * auto_aim(image, best_box) returns the yaw angle (degrees) to the target
     #   * Rotate the gimbal by that angle
     ...
 
-    # --- STEP 4: shoot (YOUR CODE) --------------------------------------------
+    # --- STEP 4: shoot --------------------------------------------
     # Guides:
     #   * Fire the blaster using blaster.INFRARED_FIRE
     ...
 
-    return image, prediction
+    return image, predictions
 
 
 if __name__ == '__main__':
