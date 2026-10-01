@@ -30,7 +30,7 @@ if __name__ == '__main__':
     ep_robot = connect()
 
     # Play audio
-    ep_robot.play_audio('engine_sound.wav')
+    ep_robot.play_audio('audio/engine_sound.wav')
 
     # End connection
     ep_robot.close()
