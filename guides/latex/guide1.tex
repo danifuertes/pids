@@ -1,10 +1,3 @@
-% =============================================================================
-%  PIDS - Proyecto 2: Sistema de detección de vehículos y conducción autónoma
-%  Bloque 1: Recolección, anotación, análisis y depuración de datos
-%
-%  Compilar desde este directorio (guides/PIDS/semana-1):
-%      pdflatex guide1.tex   (dos veces, para resolver las referencias)
-% =============================================================================
 \documentclass[12pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
@@ -56,7 +49,7 @@ A lo largo de este proyecto desarrollaremos una red neuronal para la detección 
 Como el objetivo final es detectar RoboMasters adversarios desde el propio robot, los datos deberemos capturarlos también desde el mismo. El primer paso es conectarnos al RoboMaster desde un dispositivo móvil (Android o iOS):
 
 \begin{enumerate}
-    \item Descargue la aplicación ``\textit{RoboMaster}'', disponible en la \href{https://apps.apple.com/us/app/robomaster/id1449678340}{\underline{App Store}} (iOS) o en este \href{https://upm365-my.sharepoint.com/:u:/g/personal/d_fcoiras_upm_es/EdBzFP_mAq5OhpeC3TUAZJQBiR4BNGKcqP7WRSZRQq55SQ?e=0goYev}{\underline{enlace}} (Android).
+    \item Descargue la aplicación ``\textit{RoboMaster}'', disponible en la \href{https://short.upm.es/iktbz}{\underline{App Store}} (iOS - recomendado) o en este \href{https://short.upm.es/sp1mu}{\underline{enlace}} (Android).
     \item Encienda el robot y asegúrese de que la pestaña deslizante de su cabeza apunta al símbolo de un dispositivo móvil (figura~\ref{fig: Wi-Fi module}).
     \item Conéctese a la Wi-Fi que emite el RoboMaster. Su nombre y contraseña están impresos en la parte superior de la cabeza del robot (figura~\ref{fig: Wi-Fi module}).
     \item Con la Wi-Fi conectada, ya puede abrir la aplicación y controlar el robot.
@@ -158,8 +151,6 @@ Tras autenticarse, seleccione el perfil \underline{PIDS} (figura~\ref{fig: Selec
     \label{fig: Pantallas de acceso a la interfaz de JupyterHub}
 \end{figure}
 
-Los perfiles ya vienen poblados con la estructura del proyecto: los guiones de prácticas (\textit{guides}), los notebooks (\textit{week1}, \textit{week2}) y los datos de validación y test (\textit{data\_val}, \textit{data\_test}).
-
 Esta semana trabajaremos con los notebooks de \textit{week1}, empezando por \underline{video2frames.ipynb}. Antes de ejecutarlo, suba los vídeos grabados a una nueva carpeta \textit{data\_train}. Preste especial atención a la variable \textit{INTERVAL}, que fija cada cuántos fotogramas se extrae una imagen y, por tanto, cuántas imágenes obtendrá:
 
 \begin{equation*}
@@ -247,22 +238,23 @@ Solo si desea anotar desde casa. \underline{En los ordenadores del laboratorio y
 \subsection{Uso de labelImg}
 % -----------------------------------------------------------------------------
 
-En el laboratorio, abra un terminal y ejecute:
+En el laboratorio, deposite la carpeta con sus datos (\textit{data\_train}) en \textit{/home/PIDS/robomaster}. A continuación, abra un terminal y ejecute:
 
 \begin{verbatim}
     cd /home/PIDS/robomaster
     ./labelimg/labelimg.sh
 \end{verbatim}
 
-La interfaz es bastante intuitiva (figura~\ref{fig: labelImg}). Antes de empezar, configúrela así:
+La interfaz es bastante intuitiva (figura~\ref{fig: labelImg}). Antes de empezar, configúrela como se indica a continuación:
 
 \begin{enumerate}
-    \item ``Open Dir'': seleccione la carpeta con las imágenes a etiquetar (\textit{/path/al/dataset/videoX/images}).
-    \item ``Change Save Dir'': seleccione la carpeta \textit{labels} asociada, donde se guardarán las anotaciones (\textit{/path/al/dataset/videoX/labels}).
+    \item ``Open Dir'': seleccione la carpeta con las imágenes a etiquetar (\textit{/workspace/data\_train/videoX/images}).
+    \item ``Change Save Dir'': seleccione la carpeta \textit{labels} asociada, donde se guardarán las anotaciones (\textit{/workspace/data\_train/videoX/labels}).
     \item Menú ``View'' $\rightarrow$ ``Single Class Mode'', ya que solo tenemos una clase.
+    \item Asegúrese de que debajo del botón ``Save'' aparece el formato de anotación ``PascalVOC''. Si aparece otro formato (YOLO, CreateML, etc.), haga click en dicho botón hasta que aparezca ``PascalVOC''.
 \end{enumerate}
 
-Para anotar, pulse ``Create RectBox'' (atajo \textit{w}) y dibuje la caja; la primera vez se le pedirá un nombre de clase, escriba ``robot''. Cuando haya marcado todos los robots de la imagen, guarde (\textit{CTRL+s}) y pase a la siguiente (\textit{d}). El resultado debe parecerse al de la figura~\ref{fig: annotation example}.
+Para anotar, pulse ``Create RectBox'' (atajo \textit{w}) y dibuje la caja; la primera vez se le pedirá un nombre de clase, escriba ``robot''. Cuando haya marcado todos los robots de la imagen, guarde (\textit{CTRL+s}) y pase a la siguiente (\textit{d}). El resultado debe parecerse al de la figura~\ref{fig: annotation example}. Cuando termine de anotar el \textit{videoX}, vuelva a pinchar en ``Open Dir'' y ``Change Save Dir'' y seleccione los paths \textit{/workspace/data\_train/videoY/images} y \textit{/workspace/data\_train/videoY/labels}, respectivamente.
 
 \begin{figure}[t]
     \centering
