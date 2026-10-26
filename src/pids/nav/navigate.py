@@ -298,10 +298,9 @@ class Navigator:
 
     def _send(self, vx, vy, wz):
         """Send a body-frame velocity command, converting to SDK units and signs."""
-        ok = self.chassis.drive_speed(x=vx, y=Y_SIGN_CMD * vy, z=YAW_SIGN_CMD * math.degrees(wz),
-                                      timeout=3 / RATE)
-        if ok is False:
-            raise RuntimeError('drive_speed failed')
+        # drive_speed is fire-and-forget: the SDK always returns False (no ack), so ignore it
+        self.chassis.drive_speed(x=vx, y=Y_SIGN_CMD * vy, z=YAW_SIGN_CMD * math.degrees(wz),
+                                 timeout=3 / RATE)
 
     def plan(self, commands):
         """Plan a list of commands, see plan(). No motion."""
@@ -402,7 +401,7 @@ def sign_test(ep_robot):
 if __name__ == '__main__':
 
     # Connect the robot
-    ep_robot = connect()
+    ep_robot = connect('wifi')
 
     # Run `python navigate.py sign` once to check the sign constants
     if len(sys.argv) > 1 and sys.argv[1] == 'sign':
@@ -411,8 +410,8 @@ if __name__ == '__main__':
         sys.exit()
 
     # Plan a simple L-shaped route and save a plot to inspect it
-    commands = [('forward', 1.0), ('left', 90), ('forward', 0.5)]
-    nav = Navigator(ep_robot, v_max=0.4)
+    commands = [('forward', 1.5), ('left', 135), ('forward', 1.0), ('right', 90), ('forward', 1.0)]
+    nav = Navigator(ep_robot, v_max=1.0)
     steps = nav.plan(commands)
     plot_path(steps)
 
