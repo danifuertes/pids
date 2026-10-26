@@ -24,7 +24,7 @@ requires = ["hatchling"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "win-64"]
 
 [tool.pixi.pypi-dependencies]
 pids = { path = ".", editable = true }
