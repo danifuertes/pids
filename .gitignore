@@ -4,7 +4,7 @@
 
 # vscode
 .vscode/
-CLAUDE.md
+.claude/
 *__pycache__*
 
 # data
