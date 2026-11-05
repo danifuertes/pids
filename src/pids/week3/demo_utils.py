@@ -42,6 +42,15 @@ def new_history() -> dict:
 
 def torch_load_cpu(path: str) -> Any:
     """Load a checkpoint onto the CPU (works even if it was saved on a GPU)."""
+    # Checkpoints saved with NumPy 2 (week2 env) reference 'numpy._core', which NumPy 1.x (py3.8 here) lacks
+    try:
+        import numpy._core  # noqa: F401
+    except ImportError:
+        import sys
+        import numpy.core
+        import numpy.core.multiarray
+        sys.modules['numpy._core'] = numpy.core
+        sys.modules['numpy._core.multiarray'] = numpy.core.multiarray
     return torch.load(path, map_location='cpu')
 
 
