@@ -7,6 +7,10 @@ Universidad Politécnica de Madrid (UPM): student groups build a robot detector
 and deploy it on a DJI **RoboMaster EP**. The guides in [`guides/`](guides/)
 describe how to follow the course.
 
+This course project is part of the UPM educational innovation project
+**ICAVIR**. Project website: <https://danifuertes.github.io/pids/>
+(source in [`docs/`](docs/)).
+
 ## Installation
 
 The environment is managed with [pixi](https://pixi.sh):
