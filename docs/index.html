@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICAVIR · Cloud para Aprendizaje y Visión en Robótica</title>
+  <meta name="description" content="Proyecto de Innovación Educativa de la UPM: plataforma en la nube con GPU para entrenar modelos de visión artificial y desplegarlos en robots.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">ICAVIR</a>
+  <ul>
+    <li><a href="#proyecto">Proyecto</a></li>
+    <li><a href="#flujo">Cómo funciona</a></li>
+    <li><a href="#video">Vídeo</a></li>
+    <li><a href="#resultados">Resultados</a></li>
+    <li><a href="#recursos">Recursos</a></li>
+  </ul>
+</nav>
+
+<header class="hero">
+  <div class="hero-text">
+    <p class="eyebrow">Proyecto de Innovación Educativa · Universidad Politécnica de Madrid</p>
+    <h1>ICAVIR</h1>
+    <h2>Implementación Cloud para Aprendizaje y Visión en Robótica</h2>
+    <p>Una plataforma en la nube con GPU para que los estudiantes entrenen modelos de visión artificial y los desplieguen en robots reales.</p>
+    <div class="buttons">
+      <a href="#recursos" class="btn">Código abierto</a>
+      <a href="#video" class="btn btn-ghost">Ver el vídeo</a>
+    </div>
+  </div>
+  <img src="images/robot.jpg" alt="Robot del laboratorio usado en el proyecto" class="hero-img">
+</header>
+
+<main>
+
+<section id="proyecto">
+  <h2>¿Qué es ICAVIR?</h2>
+  <div class="two-col">
+    <div>
+      <p>ICAVIR es un Proyecto de Innovación Educativa desarrollado por el Grupo de Innovación Educativa <a href="https://www.gti.ssr.upm.es/gie-alive/" target="_blank" rel="noopener">Alive</a> de la E.T.S.I. de Telecomunicación de la Universidad Politécnica de Madrid.</p>
+      <p>Su objetivo es que los estudiantes vivan todas las etapas de un proyecto real de inteligencia artificial. Recogen y etiquetan datos, entrenan un detector de objetos con GPU y lo despliegan en un robot. Así aplican en la práctica la teoría vista en asignaturas previas.</p>
+      <p>El proyecto se ha implantado en la asignatura <em>Proyecto de Ingeniería de Datos y Sistemas</em> (PIDS) del <a href="https://www.etsit.upm.es/estudios/grado-en-ingenieria-y-sistemas-de-datos.html" target="_blank" rel="noopener">Grado en Ingeniería y Sistemas de Datos</a>.</p>
+    </div>
+    <figure>
+      <img src="images/jupyterhub.png" alt="Selección de entorno con GPU en JupyterHub">
+      <figcaption>Los estudiantes eligen un entorno con GPU desde el navegador.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="flujo" class="alt">
+  <h2>Cómo funciona</h2>
+  <ol class="steps">
+    <li>
+      <span class="num">1</span>
+      <h3>Plataforma en la nube</h3>
+      <p>Clúster Kubernetes con JupyterHub, almacenamiento persistente (NFS), acceso HTTPS y una imagen Docker con el entorno de entrenamiento. Se accede desde el laboratorio o en remoto.</p>
+    </li>
+    <li>
+      <span class="num">2</span>
+      <h3>Datos</h3>
+      <p>Los grupos graban vídeo con la cámara del robot, etiquetan los fotogramas y analizan el conjunto de datos.</p>
+    </li>
+    <li>
+      <span class="num">3</span>
+      <h3>Entrenamiento</h3>
+      <p>Notebooks guiados de aumento de datos, entrenamiento y evaluación de detectores (SSD, RetinaNet, Faster R-CNN) en GPU.</p>
+    </li>
+    <li>
+      <span class="num">4</span>
+      <h3>Despliegue en el robot</h3>
+      <p>El modelo entrenado se ejecuta sobre el vídeo del robot, que detecta los objetivos y actúa en una demostración final.</p>
+    </li>
+  </ol>
+  <div class="gallery">
+    <figure>
+      <img src="images/etiquetado.jpg" alt="Etiquetado de robots en un fotograma">
+      <figcaption>Etiquetado de fotogramas para entrenar el detector.</figcaption>
+    </figure>
+    <figure>
+      <img src="images/camara-robot.jpg" alt="Vista desde la cámara del robot">
+      <figcaption>Vista desde la cámara del robot.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="video">
+  <h2>Vídeo del proyecto</h2>
+  <div class="video">
+    <!-- Cuando el vídeo esté listo, sustituye el <div class="video-placeholder"> por:
+    <iframe src="https://www.youtube-nocookie.com/embed/ID_DEL_VIDEO"
+            title="Vídeo del proyecto ICAVIR" loading="lazy"
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+    -->
+    <div class="video-placeholder">
+      <span class="play">▶</span>
+      <p>Vídeo próximamente</p>
+    </div>
+  </div>
+</section>
+
+<section id="resultados" class="alt">
+  <h2>Resultados</h2>
+  <p class="lead">Los estudiantes respondieron un cuestionario de conceptos y de confianza en sus capacidades al inicio y al final del proyecto.</p>
+  <div class="stats">
+    <div class="stat">
+      <strong>5,2 → 8,3</strong>
+      <span>nota media en la prueba de conceptos (sobre 10)</span>
+    </div>
+    <div class="stat">
+      <strong>17 de 18</strong>
+      <span>estudiantes mejoraron su puntuación</span>
+    </div>
+    <div class="stat">
+      <strong>4,7 / 5</strong>
+      <span>valoración media del proyecto</span>
+    </div>
+    <div class="stat">
+      <strong>4,9 / 5</strong>
+      <span>“Recomendaría este proyecto”</span>
+    </div>
+  </div>
+</section>
+
+<section id="recursos">
+  <h2>Recursos en abierto</h2>
+  <p class="lead">Todo el material se publica con licencia libre para que otros docentes puedan reutilizarlo.</p>
+  <div class="cards">
+    <a class="card" href="https://github.com/danifuertes/jupyter-k8s" target="_blank" rel="noopener">
+      <h3>jupyter-k8s</h3>
+      <p>Despliegue del clúster Kubernetes con JupyterHub y acceso remoto a GPU.</p>
+      <span class="link">github.com/danifuertes/jupyter-k8s →</span>
+    </a>
+    <a class="card" href="https://github.com/danifuertes/pids" target="_blank" rel="noopener">
+      <h3>pids</h3>
+      <p>Notebooks, scripts de control del robot y guías para la detección de objetos.</p>
+      <span class="link">github.com/danifuertes/pids →</span>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p><strong>Grupo de Innovación Educativa Alive</strong> · E.T.S.I. de Telecomunicación · Universidad Politécnica de Madrid</p>
+  <p><a href="https://www.gti.ssr.upm.es/gie-alive/" target="_blank" rel="noopener">www.gti.ssr.upm.es/gie-alive</a></p>
+  <p class="small">Proyecto financiado por la convocatoria de Proyectos de Innovación Educativa de la UPM.</p>
+</footer>
+
+</body>
+</html>
